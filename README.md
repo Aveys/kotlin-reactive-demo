@@ -2,7 +2,8 @@
 
 ## Producer 
 
-Typescript balec sur api
+Faire un producer ne kotlin coroutines ?
+Sinon faire un script en typescript
 
 ## back
 2 endpoint : 
@@ -17,17 +18,17 @@ MongoDB sur Docker /
 collection points
 ```JSON
 {
-  "temp": "Double"
-  "unit": "Char"
-  "wind": "String" 
+  "temp": "Double",
+  "unit": "Char",
+  "wind": "String"
 }
 ```
 
 collection station 
 ```JSON
 {
-  "id": "String"
-  "name": "String"
+  "id": "String",
+  "name": "String",
   "location": "String" 
 }
 ```
