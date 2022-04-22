@@ -1,0 +1,80 @@
+{
+	"info": {
+		"_postman_id": "9fe7cfb1-8201-47de-8973-cac8b9b89fba",
+		"name": "Demo kotlin",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Ajouter point meteo",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n\"temp\": 10.5,\r\n\"unit\": \"C\",\r\n\"wind\": \"10NE\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/stations/yul/points",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"stations",
+						"yul",
+						"points"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "recuperer tout les points",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/points/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"points",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Récupérer Point d'une station",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/stations/yul/points",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"stations",
+						"yul",
+						"points"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

@@ -3,8 +3,3 @@ services:
     image: mongo:latest
     ports:
       - 27017:27017
-    volumes:
-      - ~/apps/mongo:/data/db
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=demo
-      - MONGO_INITDB_ROOT_PASSWORD=kotlin
