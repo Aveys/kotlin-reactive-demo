@@ -2,6 +2,10 @@ package com.example.kotlindemoreactive
 
 import com.example.kotlindemoreactive.model.entity.WeatherStation
 import com.example.kotlindemoreactive.repository.WeatherStationRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.ApplicationRunner
 import org.springframework.boot.autoconfigure.SpringBootApplication
@@ -10,8 +14,6 @@ import org.springframework.boot.runApplication
 import org.springframework.data.mongodb.repository.config.EnableReactiveMongoRepositories
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.config.EnableWebFlux
-import reactor.core.publisher.Flux
-import reactor.core.scheduler.Schedulers
 
 @SpringBootApplication
 @EnableWebFlux
@@ -21,22 +23,17 @@ class KotlinDemoReactiveApplication
 
 @Component
 class AppStartupRunner(private val weatherStationRepository: WeatherStationRepository) : ApplicationRunner {
+
     override fun run(args: ApplicationArguments) {
-        weatherStationRepository.count()
-            .filter { it == 0L }
-            .map {
+        CoroutineScope(Dispatchers.Default).launch {
+            if (weatherStationRepository.count() == 0L) {
                 val stationMontreal = WeatherStation(id = "yul", name = "yul", location = "montreal")
                 val stationOttawa = WeatherStation(id = "yow", name = "yow", location = "ottawa")
                 val stationQuebec = WeatherStation(id = "yqb", name = "yqb", location = "québec")
-                return@map listOf(stationMontreal, stationOttawa, stationQuebec)
+                val flow = flowOf(stationMontreal, stationOttawa, stationQuebec)
+                weatherStationRepository.saveAll(flow)
             }
-            .flatMapMany { Flux.fromIterable(it) }
-            .publishOn(Schedulers.boundedElastic())
-            .map {
-                weatherStationRepository.save(it).subscribe { ws ->
-                    println("Saved weather station: $ws")
-                }
-            }.subscribe()
+        }
     }
 }
 

@@ -2,9 +2,11 @@ package com.example.kotlindemoreactive.service
 
 import com.example.kotlindemoreactive.model.dto.WeatherPointDTO
 import com.example.kotlindemoreactive.model.entity.WeatherPoint
+import com.example.kotlindemoreactive.model.exceptions.WeatherStationNotFound
 import com.example.kotlindemoreactive.repository.WeatherPointRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filter
 import org.springframework.stereotype.Service
-import reactor.core.publisher.Mono
 
 @Service
 class WeatherPointService(
@@ -14,24 +16,20 @@ class WeatherPointService(
 
     fun listAll() = weatherPointRepository.findAll()
 
-    fun saveWeatherPoint(stationId: String, weatherPointDTO: WeatherPointDTO): Mono<WeatherPoint> {
-        return weatherStationService.existWeatherStation(stationId)
-            .flatMap {
-                weatherPointDTO.apply { this.stationId = stationId }
-                return@flatMap if (it) {
-                    weatherPointRepository.save(weatherPointDTO.toWeatherPoint())
-                } else {
-                    Mono.error(Exception("Weather station not found"))
-                }
-            }
+    suspend fun saveWeatherPoint(stationId: String, weatherPointDTO: WeatherPointDTO): WeatherPoint {
+        return if (weatherStationService.existWeatherStation(stationId)) {
+            weatherPointDTO.apply { this.stationId = stationId }
+            weatherPointRepository.save(weatherPointDTO.toWeatherPoint())
+        } else {
+            throw WeatherStationNotFound(stationId)
+        }
     }
 
-    fun listByStationId(stationId: String) =
-        weatherStationService.existWeatherStation(stationId).map {
-            if (!it) {
-                throw Exception("Weather station not found")
-            }
+    suspend fun listByStationId(stationId: String): Flow<WeatherPoint> {
+        return if (weatherStationService.existWeatherStation(stationId)) {
+            weatherPointRepository.findAll().filter { it.stationId == stationId }
+        } else {
+            throw WeatherStationNotFound(stationId)
         }
-            .thenMany(weatherPointRepository.findAll())
-            .filter { it.stationId == stationId }
+    }
 }
