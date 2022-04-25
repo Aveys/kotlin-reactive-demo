@@ -14,7 +14,7 @@ class WeatherPointService(
     private val weatherStationService: WeatherStationService
 ) {
 
-    fun listAll() = weatherPointRepository.findAll()
+    fun listAll() = weatherPointRepository.findAll().map { it.toDTO() }
 
     suspend fun saveWeatherPoint(stationId: String, weatherPointDTO: WeatherPointDTO): WeatherPoint {
         return if (weatherStationService.existWeatherStation(stationId)) {
