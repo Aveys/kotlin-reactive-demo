@@ -20,4 +20,8 @@ class WeatherStationService(private val weatherStationRepository: WeatherStation
     fun existWeatherStation(name: String): Mono<Boolean> {
         return weatherStationRepository.existsWeatherStationByName(name)
     }
+
+    fun getAll(): Flux<WeatherStation> {
+        return weatherStationRepository.findAll()
+    }
 }

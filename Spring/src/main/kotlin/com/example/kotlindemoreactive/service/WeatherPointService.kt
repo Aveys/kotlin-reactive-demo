@@ -12,7 +12,7 @@ class WeatherPointService(
     private val weatherStationService: WeatherStationService
 ) {
 
-    fun listAll() = weatherPointRepository.findAll()
+    fun listAll() = weatherPointRepository.findAll().map { it.toDTO() }
 
     fun saveWeatherPoint(stationId: String, weatherPointDTO: WeatherPointDTO): Mono<WeatherPoint> {
         return weatherStationService.existWeatherStation(stationId)

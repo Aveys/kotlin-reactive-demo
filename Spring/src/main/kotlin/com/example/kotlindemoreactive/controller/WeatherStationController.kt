@@ -2,6 +2,7 @@ package com.example.kotlindemoreactive.controller
 
 import com.example.kotlindemoreactive.model.dto.WeatherPointDTO
 import com.example.kotlindemoreactive.model.entity.WeatherPoint
+import com.example.kotlindemoreactive.model.entity.WeatherStation
 import com.example.kotlindemoreactive.service.WeatherPointService
 import com.example.kotlindemoreactive.service.WeatherStationService
 import org.springframework.http.MediaType
@@ -16,7 +17,10 @@ import reactor.core.publisher.Mono
 
 @RestController
 @RequestMapping("/stations")
-class WeatherStationController(private val weatherStationService: WeatherStationService, private val weatherPointService: WeatherPointService) {
+class WeatherStationController(
+    private val weatherStationService: WeatherStationService,
+    private val weatherPointService: WeatherPointService
+) {
 
     @PostMapping("/{stationId}/points")
     fun addPoint(@PathVariable stationId: String, @RequestBody point: WeatherPointDTO): Mono<WeatherPoint> {
@@ -26,5 +30,10 @@ class WeatherStationController(private val weatherStationService: WeatherStation
     @GetMapping("/{stationId}/points", produces = [MediaType.APPLICATION_NDJSON_VALUE])
     fun getPointofStation(@PathVariable stationId: String): Flux<WeatherPointDTO> {
         return weatherPointService.listByStationId(stationId).map { it.toDTO() }
+    }
+
+    @GetMapping(produces = [MediaType.APPLICATION_NDJSON_VALUE])
+    fun getStations(): Flux<WeatherStation> {
+        return weatherStationService.getAll()
     }
 }
