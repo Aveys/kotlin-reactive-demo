@@ -7,6 +7,7 @@ import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.coroutines.awaitObject
 import com.github.kittinunf.fuel.coroutines.awaitUnit
 import com.github.kittinunf.fuel.jackson.objectBody
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -24,7 +25,7 @@ class MainProducer(private val numberOfPoint: Int,) {
     }
 
     fun start() {
-        runBlocking {
+        runBlocking(Dispatchers.Default) {
             println("Starting producer, getting stations lists ....")
             fetchStations().forEach {
                 launch {
