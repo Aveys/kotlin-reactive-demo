@@ -11,6 +11,7 @@ class RouterConfig {
     @Bean
     fun routerFunction(weatherPointHandler: WeatherPointHandler, weatherStationHandler: WeatherStationHandler) = coRouter {
         "/stations".nest {
+            GET("/", weatherStationHandler::)
             GET("/{stationId}/points", weatherStationHandler::addPoint)
             POST("/{stationId}/points", weatherStationHandler::getPointOfStation)
         }
