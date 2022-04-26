@@ -1,5 +1,4 @@
 import React, {useEffect, useMemo, useState} from 'react';
-import axios from 'axios'
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -44,43 +43,6 @@ function randomInRange(start: number, end: number) {
 
 function getRandomInt(max: number) {
     return randomInRange(0, max);
-}
-
-const getData = async () => {
-
-    const stationResponse = await axios.get<Station | string>("http://localhost:8080/stations");
-    const pointResponse = await axios.get<Point | string>("http://localhost:8080/points");
-
-    // The data is received in NdJSON, so it can be :
-    // if 1 line the object
-    // if N line a String of object separated by \n
-    const stations: Array<Station> = []
-    if (stationResponse.data instanceof Object) {
-        stations.push(stationResponse.data)
-    } else {
-        stationResponse.data.split("\n")
-            .filter(str => str !== null && str !== "")
-            .map(splitString => JSON.parse(splitString) as Station)
-            .forEach(station => stations.push(station))
-    }
-
-    // And for point we need to transform the instance into date
-    const points: Array<Point> = [];
-    if (pointResponse.data instanceof Object) {
-        const point = pointResponse.data
-        point.time = new Date(point.time)
-        points.push(point)
-    } else {
-        pointResponse.data.split("\n")
-            .filter(str => str !== null && str !== "")
-            .map(splitString => JSON.parse(splitString) as Point)
-            .map(point => {
-                point.time = new Date(point.time);
-                return point;
-            })
-            .forEach(station => points.push(station))
-    }
-    return {stations, points}
 }
 
 const prepareData = (stations: Array<Station>, points: Array<Point>) => {
@@ -131,17 +93,57 @@ const prepareData = (stations: Array<Station>, points: Array<Point>) => {
 function App() {
     const [stations, setStations] = useState<Array<Station>>([]);
     const [points, setPoints] = useState<Array<Point>>([]);
-    // At the start of the component we query the data with a refresh interval to get the newest dat
     useEffect(() => {
-        const getInfo = async () => {
-            setInterval(async args => {
-                const data = await getData();
-                setPoints(data.points);
-                setStations(data.stations);
-            }, 1000);
-        }
-        getInfo();
-    }, [])
+        const eventSource = new EventSource(`http://localhost:8080/stations/subscrib`);
+        eventSource.onmessage = (e) => {
+            const parsedData = JSON.parse(e.data) as Station;
+            setStations((stations) => {
+                    if (stations.find(station => station.id === parsedData.id)) {
+                        return [...stations].map((station) => {
+                            if (station.id === parsedData.id) {
+                                return parsedData;
+                            }
+                            return station;
+                        })
+                    } else {
+                        stations.push(parsedData);
+                        return stations;
+                    }
+
+                }
+            );
+        };
+        return () => {
+            eventSource.close();
+        };
+    }, []);
+
+    useEffect(() => {
+        const eventSource = new EventSource(`http://localhost:8080/points/subscrib`);
+        eventSource.onmessage = (e) => {
+            const parsedData = JSON.parse(e.data) as Point;
+            parsedData.time = new Date(parsedData.time);
+            setPoints((points) => {
+                    if (points.find(point => point.id === parsedData.id)) {
+                        return [...points].map((point) => {
+                            if (point.id === parsedData.id) {
+                                return parsedData;
+                            }
+                            return point;
+                        })
+                    } else {
+                        points.push(parsedData);
+                        return points;
+                    }
+
+                }
+            );
+        };
+        return () => {
+            eventSource.close();
+        };
+    }, []);
+
 
     // The function prepareData should only by replay if station or point is changed
     const data = useMemo(() => prepareData(stations, points), [stations, points])
