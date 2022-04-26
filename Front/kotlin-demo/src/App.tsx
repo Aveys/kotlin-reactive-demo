@@ -11,6 +11,7 @@ import {
 } from 'chart.js';
 import {Line} from 'react-chartjs-2';
 import './App.css';
+import axios from 'axios'
 import {Point, Station} from "./pointModel";
 
 
@@ -93,56 +94,74 @@ const prepareData = (stations: Array<Station>, points: Array<Point>) => {
 function App() {
     const [stations, setStations] = useState<Array<Station>>([]);
     const [points, setPoints] = useState<Array<Point>>([]);
-    useEffect(() => {
-        const eventSource = new EventSource(`http://localhost:8080/stations/subscrib`);
-        eventSource.onmessage = (e) => {
-            const parsedData = JSON.parse(e.data) as Station;
-            setStations((stations) => {
-                    if (stations.find(station => station.id === parsedData.id)) {
-                        return [...stations].map((station) => {
-                            if (station.id === parsedData.id) {
-                                return parsedData;
-                            }
-                            return station;
-                        })
-                    } else {
-                        stations.push(parsedData);
-                        return stations;
-                    }
 
-                }
-            );
-        };
-        return () => {
-            eventSource.close();
-        };
-    }, []);
+    const [stationEventSource, setStationEventSource] = useState<EventSource>();
+    const [pointEventSource, setPointEventSource] = useState<EventSource>();
 
     useEffect(() => {
-        const eventSource = new EventSource(`http://localhost:8080/points/subscrib`);
-        eventSource.onmessage = (e) => {
-            const parsedData = JSON.parse(e.data) as Point;
-            parsedData.time = new Date(parsedData.time);
-            setPoints((points) => {
-                    if (points.find(point => point.id === parsedData.id)) {
-                        return [...points].map((point) => {
-                            if (point.id === parsedData.id) {
-                                return parsedData;
+        const getStation = async () => {
+            const response = await axios.get("http://localhost:8080/stations");
+            setStations(response.data);
+        }
+        getStation();
+        setStationEventSource(prevState => {
+            if (!prevState || prevState.readyState === prevState.CLOSED) {
+                const eventSource = new EventSource(`http://localhost:8080/stations/subscribe`);
+                eventSource.onmessage = (e) => {
+                    const parsedData = JSON.parse(e.data) as Station;
+                    setStations((stations) => {
+                            if (stations.find(station => station.id === parsedData.id)) {
+                                return [...stations].map((station) => {
+                                    if (station.id === parsedData.id) {
+                                        return parsedData;
+                                    }
+                                    return station;
+                                })
+                            } else {
+                                stations.push(parsedData);
+                                return stations;
                             }
-                            return point;
-                        })
-                    } else {
-                        points.push(parsedData);
-                        return points;
-                    }
+
+                        }
+                    );
 
                 }
-            );
-        };
-        return () => {
-            eventSource.close();
-        };
-    }, []);
+                return eventSource;
+            } else {
+                return prevState;
+            }
+        })
+    }, [stationEventSource]);
+
+    useEffect(() => {
+        setPointEventSource(prevState => {
+            if (!prevState || prevState.readyState === prevState.CLOSED) {
+                const eventSource = new EventSource(`http://localhost:8080/points`);
+                eventSource.onmessage = (e) => {
+                    const parsedData = JSON.parse(e.data) as Point;
+                    parsedData.time = new Date(parsedData.time);
+                    setPoints((points) => {
+                            if (points.find(point => point.id === parsedData.id)) {
+                                return [...points].map((point) => {
+                                    if (point.id === parsedData.id) {
+                                        return parsedData;
+                                    }
+                                    return point;
+                                })
+                            } else {
+                                points.push(parsedData);
+                                return points;
+                            }
+
+                        }
+                    );
+                };
+                return eventSource;
+            } else {
+                return prevState;
+            }
+        })
+    }, [pointEventSource]);
 
 
     // The function prepareData should only by replay if station or point is changed

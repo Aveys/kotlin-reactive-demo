@@ -9,13 +9,17 @@ import org.springframework.web.reactive.function.server.coRouter
 @Configuration
 class RouterConfig {
     @Bean
-    fun routerFunction(weatherPointHandler: WeatherPointHandler, weatherStationHandler: WeatherStationHandler) = coRouter {
-        "/stations".nest {
-            GET("/{stationId}/points", weatherStationHandler::addPoint)
-            POST("/{stationId}/points", weatherStationHandler::getPointOfStation)
+    fun routerFunction(weatherPointHandler: WeatherPointHandler, weatherStationHandler: WeatherStationHandler) =
+        coRouter {
+            "/stations".nest {
+                GET("", weatherStationHandler::getAllStations)
+                GET("/subscribe", weatherStationHandler::getSubscribe)
+                POST("", weatherStationHandler::addStation)
+                POST("/{stationId}/points", weatherStationHandler::addPoint)
+                GET("/{stationId}/points", weatherStationHandler::getPointOfStation)
+            }
+            "/points".nest {
+                GET("", weatherPointHandler::listAllPoints)
+            }
         }
-        "/points".nest {
-            GET("/", weatherPointHandler::listAllPoints)
-        }
-    }
 }
