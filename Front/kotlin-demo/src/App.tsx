@@ -1,3 +1,5 @@
+import {RSocketClient} from 'rsocket-core';
+import RSocketWebsocketClient from 'rsocket-websocket-client';
 import React, {useEffect, useMemo, useState} from 'react';
 import {
     Chart as ChartJS,
@@ -10,13 +12,9 @@ import {
     Legend,
 } from 'chart.js';
 import {Line} from 'react-chartjs-2';
-// @ts-ignore
-import {RSocketClient} from 'rsocket-core';
-import RSocketWebsocketClient from 'rsocket-websocket-client';
+
 import './App.css';
 import {Point, Station} from "./pointModel";
-import {ReactiveSocket} from "rsocket-types";
-import {Single} from "rsocket-flowable";
 
 
 ChartJS.register(
@@ -55,7 +53,8 @@ async function createClient(url: string) {
             metadataMimeType: 'message/x.rsocket.routing.v0',
         },
         transport: new RSocketWebsocketClient({
-            url: url
+            url: url,
+            wsCreator: (wsUrl: string | URL) => new WebSocket(wsUrl)
         }),
     });
 
@@ -134,12 +133,12 @@ function mergeState<T extends { id: string }>(prevState: Array<T>, data: T): Arr
 function App() {
     const [stations, setStations] = useState<Array<Station>>([]);
     const [points, setPoints] = useState<Array<Point>>([]);
-    const [socket, setSocket] = useState<ReactiveSocket<any, any>>()
+    const [socket, setSocket] = useState<any>()
 
     useEffect(() => {
         const getSocket = async () => {
-            const rsocketSingle: Single<ReactiveSocket<any, any>> = await createClient("ws://localhost:8080");
-            rsocketSingle.then(rsocket => setSocket(rsocket));
+            const rsocketSingle = await createClient("ws://localhost:8080");
+            setSocket(rsocketSingle);
         };
         getSocket();
     }, []);
@@ -147,11 +146,13 @@ function App() {
     useEffect(() => {
         if (socket) {
             socket.requestStream({
-                data: "",
-                metadata: "stations.get.all"
-            }).subscribe(a => {
-                const parsedData = JSON.parse(a.data) as Station;
-                setStations(prevSet => mergeState<Station>(prevSet, parsedData));
+                data: null,
+                metadata: String.fromCharCode('stations.get.all'.length) + 'stations.get.all'
+            }).subscribe((a: { data?: string; }) => {
+                if (a.data) {
+                    const parsedData = JSON.parse(a.data) as Station;
+                    setStations(prevSet => mergeState<Station>(prevSet, parsedData));
+                }
             })
         }
 
@@ -160,11 +161,13 @@ function App() {
     useEffect(() => {
         if (socket) {
             socket.requestStream({
-                data: "",
-                metadata: "points.get.all"
-            }).subscribe(a => {
-                const parsedData = JSON.parse(a.data) as Point;
-                setPoints(prevSet => mergeState<Point>(prevSet, parsedData));
+                data: null,
+                metadata: String.fromCharCode('points.get.all'.length) + 'points.get.all'
+            }).subscribe((a: { data?: string; }) => {
+                if (a.data) {
+                    const parsedData = JSON.parse(a.data) as Point;
+                    setPoints(prevSet => mergeState<Point>(prevSet, parsedData));
+                }
             })
         }
 

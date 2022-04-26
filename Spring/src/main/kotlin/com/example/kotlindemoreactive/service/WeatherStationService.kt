@@ -17,8 +17,6 @@ class WeatherStationService(private val weatherStationRepository: WeatherStation
         weatherStationRepository.save(weatherStation)
             .also { hotStream.tryEmitNext(it).orThrow() }
 
-    suspend fun listAllWeatherStations() = weatherStationRepository.findAll()
-
     suspend fun existWeatherStation(name: String) = weatherStationRepository.existsWeatherStationByName(name)
 
     fun getAll() = weatherStationRepository.findAll()
