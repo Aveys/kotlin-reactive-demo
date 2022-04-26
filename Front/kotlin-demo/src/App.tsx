@@ -10,8 +10,13 @@ import {
     Legend,
 } from 'chart.js';
 import {Line} from 'react-chartjs-2';
+// @ts-ignore
+import {RSocketClient} from 'rsocket-core';
+import RSocketWebsocketClient from 'rsocket-websocket-client';
 import './App.css';
 import {Point, Station} from "./pointModel";
+import {ReactiveSocket} from "rsocket-types";
+import {Single} from "rsocket-flowable";
 
 
 ChartJS.register(
@@ -36,6 +41,27 @@ export const options = {
         },
     },
 };
+
+async function createClient(url: string) {
+    const client = new RSocketClient({
+        setup: {
+            // ms btw sending keepalive to server
+            keepAlive: 60000,
+            // ms timeout if no keepalive response
+            lifetime: 180000,
+            // format of `data`
+            dataMimeType: 'application/json',
+            // format of `metadata`
+            metadataMimeType: 'message/x.rsocket.routing.v0',
+        },
+        transport: new RSocketWebsocketClient({
+            url: url
+        }),
+    });
+
+    return client.connect();
+}
+
 
 function randomInRange(start: number, end: number) {
     return Math.floor(Math.random() * (end - start + 1) + start);
@@ -90,59 +116,59 @@ const prepareData = (stations: Array<Station>, points: Array<Point>) => {
     }
 }
 
+function mergeState<T extends { id: string }>(prevState: Array<T>, data: T): Array<T> {
+    if (prevState.find((value: T) => value.id === data.id)) {
+        return [...prevState].map(value => {
+            if (value.id === data.id) {
+                return data
+            }
+            return value;
+        })
+    } else {
+        prevState.push(data)
+        return prevState;
+    }
+}
+
+
 function App() {
     const [stations, setStations] = useState<Array<Station>>([]);
     const [points, setPoints] = useState<Array<Point>>([]);
-    useEffect(() => {
-        const eventSource = new EventSource(`http://localhost:8080/stations/subscrib`);
-        eventSource.onmessage = (e) => {
-            const parsedData = JSON.parse(e.data) as Station;
-            setStations((stations) => {
-                    if (stations.find(station => station.id === parsedData.id)) {
-                        return [...stations].map((station) => {
-                            if (station.id === parsedData.id) {
-                                return parsedData;
-                            }
-                            return station;
-                        })
-                    } else {
-                        stations.push(parsedData);
-                        return stations;
-                    }
+    const [socket, setSocket] = useState<ReactiveSocket<any, any>>()
 
-                }
-            );
+    useEffect(() => {
+        const getSocket = async () => {
+            const rsocketSingle: Single<ReactiveSocket<any, any>> = await createClient("ws://localhost:8080");
+            rsocketSingle.then(rsocket => setSocket(rsocket));
         };
-        return () => {
-            eventSource.close();
-        };
+        getSocket();
     }, []);
 
     useEffect(() => {
-        const eventSource = new EventSource(`http://localhost:8080/points/subscrib`);
-        eventSource.onmessage = (e) => {
-            const parsedData = JSON.parse(e.data) as Point;
-            parsedData.time = new Date(parsedData.time);
-            setPoints((points) => {
-                    if (points.find(point => point.id === parsedData.id)) {
-                        return [...points].map((point) => {
-                            if (point.id === parsedData.id) {
-                                return parsedData;
-                            }
-                            return point;
-                        })
-                    } else {
-                        points.push(parsedData);
-                        return points;
-                    }
+        if (socket) {
+            socket.requestStream({
+                data: "",
+                metadata: "stations.get.all"
+            }).subscribe(a => {
+                const parsedData = JSON.parse(a.data) as Station;
+                setStations(prevSet => mergeState<Station>(prevSet, parsedData));
+            })
+        }
 
-                }
-            );
-        };
-        return () => {
-            eventSource.close();
-        };
-    }, []);
+    }, [socket]);
+
+    useEffect(() => {
+        if (socket) {
+            socket.requestStream({
+                data: "",
+                metadata: "points.get.all"
+            }).subscribe(a => {
+                const parsedData = JSON.parse(a.data) as Point;
+                setPoints(prevSet => mergeState<Point>(prevSet, parsedData));
+            })
+        }
+
+    }, [socket]);
 
 
     // The function prepareData should only by replay if station or point is changed
